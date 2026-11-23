@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import {
   Bell,
+  Bike,
   ChevronRight,
   CircleCheck,
   CreditCard,
@@ -169,6 +170,18 @@ function SettingsHub({ onNavigate }: { onNavigate: (s: SettingsSection) => void 
           subtitle="Gastos e entradas, por grupo"
           trailing={chevron}
           onPress={() => router.push('/categorias')}
+        />
+
+        <ListRow
+          leading={
+            <IconTile>
+              <Bike size={19} color={colors.accent} strokeWidth={2} />
+            </IconTile>
+          }
+          title="Modo corrida"
+          subtitle="Captura de Pix do Nubank, permissão e regras"
+          trailing={chevron}
+          onPress={() => router.push('/modo-corrida')}
         />
       </ListSection>
 

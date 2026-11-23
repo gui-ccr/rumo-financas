@@ -17,6 +17,7 @@ export const QK = {
   plan: ['plan'],
   notes: ['notes'],
   agenda: ['agenda'],
+  shifts: ['shifts'],
 } as const satisfies Record<string, QueryKey>;
 
 /**

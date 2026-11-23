@@ -22,6 +22,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ContainerProvider } from '@/core/container-context';
 import { useAppBootstrap } from '@/core/use-app-bootstrap';
+import { useNotificationSync } from '@/features/shifts/presentation/hooks';
 import { migrate } from '@/shared/infrastructure/database/migrations';
 import { applyStoredThemePreference } from '@/shared/presentation/theme-preference';
 import { useIsDark, useNavTheme, useThemeColors } from '@/shared/ui/theme';
@@ -85,6 +86,7 @@ export default function RootLayout() {
 
 function Bootstrap() {
   useAppBootstrap();
+  useNotificationSync();
   return null;
 }
 
@@ -117,6 +119,8 @@ function Routes() {
       <Stack.Screen name="fatura/pagar" options={sheet} />
       <Stack.Screen name="ajustes" options={{ title: 'Ajustes' }} />
       <Stack.Screen name="moto" options={{ headerShown: false }} />
+      <Stack.Screen name="modo-corrida" options={{ headerShown: false }} />
+      <Stack.Screen name="turno/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="ajustes/conta/[id]" options={modal} />
       <Stack.Screen name="ajustes/categoria/[id]" options={modal} />
       <Stack.Screen name="categorias" options={{ headerShown: false }} />

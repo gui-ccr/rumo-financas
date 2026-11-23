@@ -52,3 +52,6 @@ yarn.lock
 # local tool binaries
 .claude/skills/impeccable/scripts/bin/
 .claude/settings.local.json
+
+# Artefatos de build de módulos locais (Expo modules)
+modules/*/android/build/

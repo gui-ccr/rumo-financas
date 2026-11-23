@@ -14,6 +14,9 @@ export const NewTransactionInputSchema = z
     toAccountId: z.number().int().nullable().default(null),
     installments: z.number().int().min(1).max(48).default(1),
     billOccurrenceId: z.number().int().nullable().default(null),
+    /** "notification" for income captured from a bank notification (driving mode). */
+    source: z.enum(['manual', 'notification']).default('manual'),
+    rawText: z.string().max(2000).nullable().default(null),
   })
   .refine((v) => v.type === 'transfer' || v.categoryId !== null, {
     message: 'Escolha uma categoria',

@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
-import { Fuel, Plus } from 'lucide-react-native';
+import { ChevronRight, Fuel, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { ShiftCard } from '@/features/shifts/presentation/components/shift-card';
 import { Button } from '@/shared/ui/button';
 import { CategoryBadge } from '@/shared/ui/category-badge';
 import { EmptyState, Skeleton } from '@/shared/ui/feedback';
@@ -32,6 +33,8 @@ export function MotoScreen() {
 
   return (
     <Screen back title="Moto" onRefresh={refetch} refreshing={isRefetching}>
+      <ShiftCard />
+
       {isLoading || !data ? (
         <Skeleton className="h-[92px]" />
       ) : (
@@ -97,6 +100,16 @@ export function MotoScreen() {
 
       {data && data.byApp.length > 0 && <Breakdown title="Ganhos por app" items={data.byApp} total={data.earnedCents} />}
       {data && data.byCost.length > 0 && <Breakdown title="Custos da moto" items={data.byCost} total={data.costCents} />}
+
+      <ListSection>
+        <ListRow
+          leading={<CategoryBadge icon="navigation" color={colors.accent} />}
+          title="Modo corrida"
+          subtitle="Histórico de turnos, permissão e regras de Pix"
+          trailing={<ChevronRight size={18} color={colors.iconMuted} />}
+          onPress={() => router.push('/modo-corrida')}
+        />
+      </ListSection>
 
       {empty && (
         <EmptyState

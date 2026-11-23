@@ -7,6 +7,7 @@ import { availableBalance, cardDebt } from '@/features/accounts/domain/account';
 import { InvoiceRow, OccurrenceRow } from '@/features/bills/presentation/components/occurrence-row';
 import { useBillsOfMonth, useUpcomingBills } from '@/features/bills/presentation/hooks';
 import { useExpectedIncome, usePendingIncomes } from '@/features/incomes/presentation/hooks';
+import { ShiftCard } from '@/features/shifts/presentation/components/shift-card';
 import { ProfileHeader } from '@/features/profile/presentation/components/profile-header';
 import { TransactionRow } from '@/features/transactions/presentation/components/transaction-row';
 import { useRecentTransactions } from '@/features/transactions/presentation/hooks';
@@ -78,6 +79,8 @@ export function HomeScreen() {
       ) : (
         <Skeleton className="h-[104px]" />
       )}
+
+      <ShiftCard compact />
 
       <View className="-mt-2 flex-row gap-3">
         <BillsStatus paid={paid} total={billList.length} pendingCents={bills.data?.totals.pendingCents ?? 0} />

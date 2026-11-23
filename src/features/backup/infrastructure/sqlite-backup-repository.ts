@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import type { UnitOfWork } from '@/shared/application/unit-of-work';
+import { NUBANK_PIX_RULE_SQL } from '@/shared/infrastructure/database/migrations';
 import { placeholders } from '@/shared/infrastructure/database/sql';
 
 import { BACKUP_TABLES, type BackupRepository, type BackupTable, type Row } from '../domain/backup';
@@ -33,6 +34,10 @@ export class SqliteBackupRepository implements BackupRepository {
             cols.map((c) => row[c] ?? null),
           );
         }
+      }
+      // Backups from before the ride mode have no rules; keep the default Nubank rule so capture keeps working.
+      if ((tables.notification_rules ?? []).length === 0) {
+        await this.db.execAsync(NUBANK_PIX_RULE_SQL);
       }
     });
   }

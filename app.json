@@ -44,6 +44,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "8661ee4d-cfd3-4bc1-b454-cd2f0b5d39f2"
+      }
+    },
+    "owner": "gui-ccr"
   }
 }

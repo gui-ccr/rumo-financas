@@ -40,8 +40,8 @@ export class CreateTransaction {
       billOccurrenceId: v.billOccurrenceId,
       invoiceMonth: null,
       installment: null,
-      source: 'manual',
-      rawText: null,
+      source: v.source,
+      rawText: v.rawText,
     };
 
     if (v.type !== 'expense' || !isCreditCard(account)) {

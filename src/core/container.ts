@@ -32,6 +32,21 @@ import { DeleteNote, SaveNote } from '@/features/notes/application/save-note';
 import { ToggleNoteDone, ToggleNotePin } from '@/features/notes/application/toggle-note';
 import { ExpoNoteReminderScheduler } from '@/features/notes/infrastructure/expo-note-reminder-scheduler';
 import { SqliteNoteRepository } from '@/features/notes/infrastructure/sqlite-note-repository';
+import { ConfirmShift } from '@/features/shifts/application/confirm-shift';
+import { IngestCaptures } from '@/features/shifts/application/ingest-captures';
+import {
+  DeleteNotificationRule,
+  SaveNotificationRule,
+  SyncWatchedPackages,
+  ToggleNotificationRule,
+} from '@/features/shifts/application/notification-rules';
+import { DiscardShift, EndShift, StartShift } from '@/features/shifts/application/shift-lifecycle';
+import { GetActiveShift, GetShiftReview, ListLearningCaptures, ListShifts } from '@/features/shifts/application/shift-queries';
+import { AssignCaptureToShift, SetReportedTotal, UpdateShiftCapture } from '@/features/shifts/application/review-shift';
+import { NativeNotificationSource } from '@/features/shifts/infrastructure/native-notification-source';
+import { SqliteCaptureRepository } from '@/features/shifts/infrastructure/sqlite-capture-repository';
+import { SqliteNotificationRuleRepository } from '@/features/shifts/infrastructure/sqlite-notification-rule-repository';
+import { SqliteShiftRepository } from '@/features/shifts/infrastructure/sqlite-shift-repository';
 import { CreateTransaction } from '@/features/transactions/application/create-transaction';
 import { DeleteTransaction } from '@/features/transactions/application/delete-transaction';
 import { EditTransaction } from '@/features/transactions/application/edit-transaction';
@@ -57,9 +72,14 @@ export function createContainer(db: SQLiteDatabase) {
     moto: new SqliteMotoRepository(db),
     incomes: new SqliteIncomeRepository(db),
     notes: new SqliteNoteRepository(db),
+    shifts: new SqliteShiftRepository(db),
+    captures: new SqliteCaptureRepository(db),
+    notificationRules: new SqliteNotificationRuleRepository(db),
   };
 
   const noteReminders = new ExpoNoteReminderScheduler();
+  const notificationSource = new NativeNotificationSource();
+  const syncWatchedPackages = new SyncWatchedPackages(repos.notificationRules, notificationSource);
 
   const createTransaction = new CreateTransaction(repos.accounts, repos.transactions, uow, newId);
   // Deleting a payment or a receipt reopens whatever it settled.
@@ -114,11 +134,28 @@ export function createContainer(db: SQLiteDatabase) {
     toggleNoteDone: new ToggleNoteDone(repos.notes, noteReminders),
     toggleNotePin: new ToggleNotePin(repos.notes),
 
+    startShift: new StartShift(repos.shifts, repos.accounts, repos.categories),
+    endShift: new EndShift(repos.shifts),
+    discardShift: new DiscardShift(repos.shifts, repos.captures, uow),
+    ingestCaptures: new IngestCaptures(repos.notificationRules, repos.shifts, repos.captures, uow),
+    getActiveShift: new GetActiveShift(repos.shifts, repos.captures),
+    getShiftReview: new GetShiftReview(repos.shifts, repos.captures),
+    listShifts: new ListShifts(repos.shifts),
+    listLearningCaptures: new ListLearningCaptures(repos.captures),
+    updateShiftCapture: new UpdateShiftCapture(repos.shifts, repos.captures),
+    assignCaptureToShift: new AssignCaptureToShift(repos.shifts, repos.captures),
+    setReportedTotal: new SetReportedTotal(repos.shifts),
+    confirmShift: new ConfirmShift(repos.shifts, repos.captures, createTransaction, uow),
+    syncWatchedPackages,
+    saveNotificationRule: new SaveNotificationRule(repos.notificationRules, syncWatchedPackages),
+    deleteNotificationRule: new DeleteNotificationRule(repos.notificationRules, syncWatchedPackages),
+    toggleNotificationRule: new ToggleNotificationRule(repos.notificationRules, syncWatchedPackages),
+
     exportBackup: new ExportBackup(backupRepo, backupFiles),
     importBackup: new ImportBackup(backupRepo, backupFiles),
   };
 
-  return { repos, useCases };
+  return { repos, useCases, notificationSource };
 }
 
 export type Container = ReturnType<typeof createContainer>;

@@ -9,6 +9,9 @@ export const BACKUP_TABLES = [
   'transactions',
   'incomes',
   'income_occurrences',
+  'notification_rules',
+  'shifts',
+  'notification_captures',
 ] as const;
 export type BackupTable = (typeof BACKUP_TABLES)[number];
 
@@ -28,6 +31,10 @@ export const BackupSnapshotSchema = z.object({
     // Added in schema v3. Older backups do not have them: they restore as empty lists.
     incomes: rows.default([]),
     income_occurrences: rows.default([]),
+    // Added in schema v6 (driving mode). Older backups restore these as empty lists.
+    notification_rules: rows.default([]),
+    shifts: rows.default([]),
+    notification_captures: rows.default([]),
   }),
 });
 export type BackupSnapshot = z.infer<typeof BackupSnapshotSchema>;

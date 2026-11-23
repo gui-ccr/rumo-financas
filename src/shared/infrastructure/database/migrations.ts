@@ -40,6 +40,21 @@ export const BILL_DEDUPE_SQL = `
 `;
 
 /**
+ * Seed of the Nubank "Pix recebido" rule (migration 6). Raw string: the regex backslashes stay as written.
+ * The text pattern: `valor` is the amount ("1.234,56", "25,00", "25"), `pagador` the payer, when present.
+ * Frozen with the migration on purpose; later changes to defaults belong in a new migration.
+ */
+export const NUBANK_PIX_RULE_SQL = String.raw`
+  INSERT INTO notification_rules (name, package_name, title_pattern, text_pattern, active) VALUES (
+    'Nubank — Pix recebido',
+    'com.nu.production',
+    'Pix recebido|Transfer[êe]ncia recebida',
+    'voc[êe]\s+recebeu\s+.*?R\$\s*(?<valor>\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+(?:,\d{1,2})?)(?:\s+de\s+(?<pagador>.+?))?\.?\s*$',
+    1
+  );
+`;
+
+/**
  * Forward-only migrations keyed by PRAGMA user_version.
  * Append new entries; never edit a shipped one.
  */
@@ -203,6 +218,51 @@ export const MIGRATIONS: string[] = [
   `,
   /* 5 — data: one item per bill per month. Removes the duplicates that earlier builds created. */
   BILL_DEDUPE_SQL,
+  /* 6 — additive: driving mode. Notification rules, shifts, and the payments captured from notifications.
+   * The seed rule is frozen here on purpose: later changes to the defaults do not rewrite this migration. */ `
+  CREATE TABLE notification_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    package_name TEXT NOT NULL,
+    title_pattern TEXT,
+    text_pattern TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1
+  );
+
+  CREATE INDEX idx_notif_rules_package ON notification_rules(package_name);
+
+  CREATE TABLE shifts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at TEXT NOT NULL,
+    ended_at TEXT,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'reviewing', 'confirmed', 'discarded')),
+    category_id INTEGER NOT NULL REFERENCES categories(id),
+    account_id INTEGER NOT NULL REFERENCES accounts(id),
+    reported_total_cents INTEGER CHECK (reported_total_cents IS NULL OR reported_total_cents >= 0),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  CREATE UNIQUE INDEX idx_shifts_one_active ON shifts(status) WHERE status = 'active';
+
+  CREATE TABLE notification_captures (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    capture_key TEXT NOT NULL UNIQUE,
+    package_name TEXT NOT NULL,
+    title TEXT,
+    text TEXT,
+    posted_at TEXT NOT NULL,
+    rule_id INTEGER REFERENCES notification_rules(id) ON DELETE SET NULL,
+    amount_cents INTEGER CHECK (amount_cents IS NULL OR amount_cents > 0),
+    payer TEXT,
+    status TEXT NOT NULL CHECK (status IN ('unmatched', 'in_shift', 'outside_shift', 'rejected', 'confirmed')),
+    shift_id INTEGER REFERENCES shifts(id),
+    transaction_id INTEGER REFERENCES transactions(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  CREATE INDEX idx_captures_shift ON notification_captures(shift_id);
+  CREATE INDEX idx_captures_status_posted ON notification_captures(status, posted_at);
+  ` + NUBANK_PIX_RULE_SQL,
 ];
 
 /** UPDATE statements that recolor rows by name (values are constants, not user input). */

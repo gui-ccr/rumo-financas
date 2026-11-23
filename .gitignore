@@ -41,3 +41,14 @@ example
 # generated native folders
 /ios
 /android
+
+# design kit extraction (raw Figma export, reference only)
+docs/design/_raw/
+docs/design/frames/
+
+# npm is the package manager (package-lock.json)
+yarn.lock
+
+# local tool binaries
+.claude/skills/impeccable/scripts/bin/
+.claude/settings.local.json

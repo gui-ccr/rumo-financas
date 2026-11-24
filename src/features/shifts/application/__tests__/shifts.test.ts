@@ -18,6 +18,7 @@ import { SqliteNotificationRuleRepository } from '../../infrastructure/sqlite-no
 import { SqliteShiftRepository } from '../../infrastructure/sqlite-shift-repository';
 import { ConfirmShift } from '../confirm-shift';
 import { IngestCaptures } from '../ingest-captures';
+import { buildSimpleRule } from '../../domain/simple-rule';
 import { SaveNotificationRule, DeleteNotificationRule, SyncWatchedPackages, ToggleNotificationRule } from '../notification-rules';
 import { DiscardShift, EndShift, StartShift } from '../shift-lifecycle';
 import { GetActiveShift, GetShiftReview, ListLearningCaptures, ListShifts } from '../shift-queries';
@@ -41,7 +42,9 @@ class FakeSource implements NotificationSource {
   hasPermission() {
     return true;
   }
-  openPermissionSettings() {}
+  async openPermissionSettings() {
+    return true;
+  }
   setWatchedPackages(packages: string[]) {
     this.watched = packages;
   }
@@ -460,5 +463,29 @@ describe('notification rules', () => {
     await expect(
       s.save.execute({ name: 'x', packageName: 'com.exemplo.banco', titlePattern: '[', textPattern: '(\\d+)' }),
     ).rejects.toThrow('título');
+  });
+
+  it('saves the rule the simple form builds, without a validation error, and the rule then reads the Pix', async () => {
+    const s = await setup();
+    const built = buildSimpleRule({
+      bankId: 'nubank',
+      customPackage: '',
+      example: 'Você recebeu um Pix de R$ 25,00 de Fulano de Tal.',
+      name: '',
+    });
+    expect(built.error).toBeNull();
+
+    const id = await s.save.execute({
+      name: built.name,
+      packageName: built.packageName,
+      titlePattern: null,
+      textPattern: built.textPattern,
+    });
+
+    expect(await s.rules.findById(id)).toMatchObject({ name: 'Pix do Nubank', packageName: NUBANK_APP, titlePattern: null });
+    expect(await s.ingest.execute([raw('k-simple', at(19, 30), 'Pix recebido', 'Você recebeu um Pix de R$ 80,90 de Beltrano.')])).toBe(1);
+    expect(await s.learning.execute()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ captureKey: 'k-simple', amountCents: 8090, payer: 'Beltrano' })]),
+    );
   });
 });

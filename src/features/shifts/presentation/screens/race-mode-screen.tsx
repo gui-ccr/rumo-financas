@@ -6,7 +6,7 @@ import { Switch, View } from 'react-native';
 import { formatBRL } from '@/shared/domain/money';
 import { Button } from '@/shared/ui/button';
 import { IconTile } from '@/shared/ui/category-badge';
-import { EmptyState, Skeleton } from '@/shared/ui/feedback';
+import { EmptyState, ErrorNote, Skeleton } from '@/shared/ui/feedback';
 import { ListRow, ListSection } from '@/shared/ui/list';
 import { Money } from '@/shared/ui/money';
 import { Screen, HeaderIconButton } from '@/shared/ui/screen';
@@ -15,8 +15,10 @@ import { Surface } from '@/shared/ui/surface';
 import { Text } from '@/shared/ui/text';
 import { useThemeColors } from '@/shared/ui/theme';
 
+import { bankNameForPackage } from '../../domain/known-banks';
+import type { NotificationCapture } from '../../domain/notification-capture';
 import type { NotificationRule } from '../../domain/notification-rule';
-import { RuleForm } from '../components/rule-form';
+import { RuleForm, type RulePrefill } from '../components/rule-form';
 import { formatClock, formatDuration, formatShiftStart } from '../format';
 import {
   useCaptureAccess,
@@ -35,12 +37,21 @@ export function RaceModeScreen() {
   const shifts = useShifts();
   const toggle = useToggleNotificationRule();
   const [editing, setEditing] = useState<NotificationRule | 'new' | null>(null);
+  const [prefill, setPrefill] = useState<RulePrefill | undefined>(undefined);
+  // Bumped on every open, so the form starts fresh even when it opens as 'new' twice.
+  const [formKey, setFormKey] = useState(0);
   const sheet = useRef<SheetRef>(null);
 
-  const openRule = (rule: NotificationRule | 'new') => {
+  const openRule = (rule: NotificationRule | 'new', from?: RulePrefill) => {
     setEditing(rule);
+    setPrefill(from);
+    setFormKey((k) => k + 1);
     sheet.current?.present();
   };
+
+  /** "É um Pix recebido": a new rule from the app and text of an unrecognized notification. */
+  const openFromCapture = (capture: NotificationCapture) =>
+    openRule('new', { packageName: capture.packageName, example: capture.text ?? '' });
 
   const unmatched = (learning.data ?? []).filter((c) => c.status === 'unmatched').slice(0, 20);
 
@@ -93,7 +104,18 @@ export function RaceModeScreen() {
               <Text variant="muted">2. Procure Rumo na lista de apps.</Text>
               <Text variant="muted">3. Ative o acesso às notificações.</Text>
               <Text variant="muted">4. Volte para o Rumo. A permissão é checada sozinha.</Text>
+              <Text variant="caption">
+                Se a opção estiver cinza (configuração restrita): Ajustes &gt; Apps &gt; Rumo &gt; menu de três pontos &gt;
+                Permitir configurações restritas, e tente de novo.
+              </Text>
             </View>
+            <ErrorNote
+              message={
+                access.settingsFailed
+                  ? 'Não consegui abrir as configurações. Vá em Ajustes do celular > Apps > Rumo e ative o acesso às notificações.'
+                  : null
+              }
+            />
             <Button variant="secondary" onPress={access.openSettings}>
               <Text>Abrir configurações</Text>
             </Button>
@@ -122,7 +144,7 @@ export function RaceModeScreen() {
                   </IconTile>
                 }
                 title={rule.name}
-                subtitle={rule.packageName}
+                subtitle={bankNameForPackage(rule.packageName) ?? rule.packageName}
                 trailing={
                   <Switch
                     value={rule.active}
@@ -158,12 +180,19 @@ export function RaceModeScreen() {
                     {c.text ?? 'Sem texto'}
                   </Text>
                 }
+                trailing={
+                  <Button variant="secondary" size="sm" onPress={() => openFromCapture(c)}>
+                    <Text>É um Pix recebido</Text>
+                  </Button>
+                }
               />
             ))
           )}
         </ListSection>
         {unmatched.length > 0 && (
-          <Text variant="caption">Se um destes for Pix recebido, ajuste o padrão de texto na regra do app.</Text>
+          <Text variant="caption">
+            Se um destes for Pix recebido, toque em “É um Pix recebido” para criar a regra com o texto dele.
+          </Text>
         )}
       </View>
 
@@ -196,8 +225,9 @@ export function RaceModeScreen() {
       <Sheet ref={sheet} title={editing === 'new' || editing === null ? 'Nova regra' : 'Editar regra'}>
         {editing !== null && (
           <RuleForm
-            key={editing === 'new' ? 'new' : editing.id}
+            key={formKey}
             rule={editing === 'new' ? undefined : editing}
+            prefill={prefill}
             onDone={() => sheet.current?.dismiss()}
           />
         )}

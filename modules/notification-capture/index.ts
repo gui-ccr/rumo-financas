@@ -23,7 +23,8 @@ type NotificationCaptureNative = {
     listener: NotificationCaptureEvents[E],
   ): { remove(): void };
   hasPermission(): boolean;
-  openPermissionSettings(): void;
+  /** true quando alguma tela de configurações abriu. */
+  openPermissionSettings(): boolean;
   setWatchedPackages(packages: string[]): void;
   getWatchedPackages(): string[];
   drainCaptures(): RawCapture[];
@@ -53,9 +54,9 @@ export function hasPermission(): boolean {
   return safe(false, (mod) => mod.hasPermission());
 }
 
-/** Abre a tela de acesso a notificações do Android. */
-export function openPermissionSettings(): void {
-  safe(undefined, (mod) => mod.openPermissionSettings());
+/** Abre a tela de acesso a notificações do Android (deste app, quando o sistema permite). false se nenhuma abriu. */
+export function openPermissionSettings(): boolean {
+  return safe(false, (mod) => mod.openPermissionSettings());
 }
 
 /** Define os pacotes observados (persistido em SharedPreferences). */

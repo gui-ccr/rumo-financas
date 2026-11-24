@@ -200,7 +200,8 @@ export function useNotificationSync() {
 /**
  * Whether the app can read notifications: the native reader exists, and the user granted access.
  * `refresh` re-reads it; the state also refreshes when the app returns to the foreground (the user
- * usually comes back from the system settings screen).
+ * usually comes back from the system settings screen). `settingsFailed` is true when no settings
+ * screen could be opened from the last `openSettings` call.
  */
 export function useCaptureAccess() {
   const { notificationSource } = useContainer();
@@ -211,6 +212,7 @@ export function useCaptureAccess() {
   }, [notificationSource]);
 
   const [access, setAccess] = useState(read);
+  const [settingsFailed, setSettingsFailed] = useState(false);
   const refresh = useCallback(() => setAccess(read()), [read]);
 
   useEffect(() => {
@@ -220,7 +222,10 @@ export function useCaptureAccess() {
     return () => appState.remove();
   }, [refresh]);
 
-  const openSettings = useCallback(() => notificationSource.openPermissionSettings(), [notificationSource]);
+  const openSettings = useCallback(async () => {
+    const opened = await notificationSource.openPermissionSettings();
+    setSettingsFailed(!opened);
+  }, [notificationSource]);
 
-  return { available: access.available, granted: access.granted, openSettings, refresh };
+  return { available: access.available, granted: access.granted, openSettings, settingsFailed, refresh };
 }

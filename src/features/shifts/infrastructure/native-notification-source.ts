@@ -1,10 +1,14 @@
+import { Linking } from 'react-native';
+
 import type { NotificationSource, RawCapture } from '../domain/notification-source';
+
+const ACTION_NOTIFICATION_LISTENER_SETTINGS = 'android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS';
 
 /** Surface of the native module (modules/notification-capture), as the adapter uses it. */
 type NativeNotificationCapture = {
   isAvailable(): boolean;
   hasPermission(): boolean;
-  openPermissionSettings(): void;
+  openPermissionSettings(): boolean;
   setWatchedPackages(packages: string[]): void;
   getWatchedPackages(): string[];
   drainCaptures(): RawCapture[];
@@ -39,8 +43,24 @@ export class NativeNotificationSource implements NotificationSource {
     return this.native !== null && this.native.hasPermission();
   }
 
-  openPermissionSettings() {
-    this.native?.openPermissionSettings();
+  /**
+   * Native screen first (this app's listener, then the listeners list, then app info). If the native
+   * module is missing or none opened, tries the Android listeners action and the RN app settings.
+   */
+  async openPermissionSettings(): Promise<boolean> {
+    if (this.native?.openPermissionSettings()) return true;
+    try {
+      await Linking.sendIntent(ACTION_NOTIFICATION_LISTENER_SETTINGS);
+      return true;
+    } catch {
+      // no activity handles the action on this device; try the app settings next
+    }
+    try {
+      await Linking.openSettings();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   setWatchedPackages(packages: string[]) {

@@ -17,7 +17,11 @@ export interface NotificationSource {
   /** False where the native reader is not built in (Expo Go, iOS, tests). */
   isAvailable(): boolean;
   hasPermission(): boolean;
-  openPermissionSettings(): void;
+  /**
+   * Opens the system screen where the user grants notification access. Resolves to false when no
+   * settings screen could be opened, so the UI can say so.
+   */
+  openPermissionSettings(): Promise<boolean>;
   setWatchedPackages(packages: string[]): void;
   getWatchedPackages(): string[];
   /** Returns the captures received since the last drain, and clears them. */

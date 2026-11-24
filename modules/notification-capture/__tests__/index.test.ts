@@ -14,7 +14,7 @@ describe('notification-capture sem módulo nativo (Jest / Expo Go / web)', () =>
     expect(hasPermission()).toBe(false);
     expect(getWatchedPackages()).toEqual([]);
     expect(drainCaptures()).toEqual([]);
-    expect(() => openPermissionSettings()).not.toThrow();
+    expect(openPermissionSettings()).toBe(false);
     expect(() => setWatchedPackages(['com.nu.production'])).not.toThrow();
   });
 

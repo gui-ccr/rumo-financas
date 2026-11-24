@@ -21,6 +21,7 @@ import { Alert, View } from 'react-native';
 
 import { useReminderSync } from '@/features/bills/presentation/hooks';
 import { useExportBackup, useImportBackup } from '@/features/backup/presentation/hooks';
+import { avatarIconFor } from '@/features/profile/presentation/avatar-icons';
 import { useProfile } from '@/features/profile/presentation/hooks';
 import { useThemePreference, type ThemePreference } from '@/shared/presentation/theme-preference';
 import { errorMessage } from '@/shared/presentation/use-command';
@@ -92,7 +93,15 @@ function SettingsHub({ onNavigate }: { onNavigate: (s: SettingsSection) => void 
       {/* Primeira linha: o próprio perfil */}
       <ListSection>
         <ListRow
-          leading={<Avatar name={profile.data?.name ?? ''} photoUri={profile.data?.photoUri} size={40} />}
+          leading={
+            <Avatar
+              name={profile.data?.name ?? ''}
+              photoUri={profile.data?.photoUri}
+              color={profile.data?.avatarColor}
+              icon={avatarIconFor(profile.data?.avatarIcon ?? null)}
+              size={40}
+            />
+          }
           title={profile.data?.name || 'Seu perfil'}
           subtitle="Editar perfil"
           trailing={chevron}

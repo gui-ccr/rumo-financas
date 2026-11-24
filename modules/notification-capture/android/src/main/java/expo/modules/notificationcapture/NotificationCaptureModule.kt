@@ -21,8 +21,9 @@ class NotificationCaptureModule : Module() {
    * lives). Returns true as soon as one of them opens.
    */
   private fun openNotificationAccessSettings(): Boolean {
-    val pkg = requireContext().packageName
-    val listener = ComponentName(pkg, NotificationCaptureListenerService::class.java).flattenToString()
+    val context = requireContext()
+    val pkg = context.packageName
+    val listener = ComponentName(context, NotificationCaptureListenerService::class.java).flattenToString()
 
     val intents = buildList {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

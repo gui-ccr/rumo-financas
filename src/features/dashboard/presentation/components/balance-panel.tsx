@@ -49,11 +49,14 @@ export function StatusCard({
   href,
   children,
   className,
+  leading,
 }: {
   title: string;
   href: Href;
   children: ReactNode;
   className?: string;
+  /** Small illustration shown left of the title. Header keeps the same height with or without it. */
+  leading?: ReactNode;
 }) {
   const colors = useThemeColors();
   return (
@@ -63,8 +66,13 @@ export function StatusCard({
       accessibilityLabel={title}
       className={cn('flex-1 active:opacity-80', className)}>
       <Surface tone="raised" className="min-h-[124px] justify-between gap-3 rounded-lg p-4">
-        <View className="flex-row items-center justify-between">
-          <Text variant="muted">{title}</Text>
+        <View className="min-h-[32px] flex-row items-center justify-between gap-2">
+          <View className="min-w-0 flex-1 flex-row items-center gap-2">
+            {leading}
+            <Text variant="muted" numberOfLines={1} className="shrink">
+              {title}
+            </Text>
+          </View>
           <ChevronRight size={16} color={colors.iconMuted} />
         </View>
         {children}
@@ -116,19 +124,20 @@ export function IncomeStatus({
   hint?: string;
 }) {
   return (
-    <StatusCard title="Entradas" href="/dinheiro?tab=planejar">
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1 gap-0.5">
-          <Money cents={incomeCents} size="md" tone="income" />
-          <Text variant="caption" numberOfLines={1}>
-            {expectedCents > 0
-              ? `+ ${formatBRL(expectedCents)} previsto`
-              : waitingCount && waitingCount > 0
-                ? `${waitingCount} ${waitingCount === 1 ? 'bolsa aguardando' : 'bolsas aguardando'}`
-                : hint ?? 'Rendas e bolsas'}
-          </Text>
-        </View>
-        <Illustration name={waitingCount && waitingCount > 0 ? 'waiting' : 'received'} size={48} />
+    <StatusCard
+      title="Entradas"
+      href="/dinheiro?tab=planejar"
+      leading={<Illustration name={waitingCount && waitingCount > 0 ? 'waiting' : 'received'} size={36} />}>
+      {/* Value on its own line, below the header, so it never shares width with the illustration. */}
+      <View className="min-w-0 gap-0.5">
+        <Money cents={incomeCents} size="md" tone="income" />
+        <Text variant="caption" numberOfLines={1}>
+          {expectedCents > 0
+            ? `+ ${formatBRL(expectedCents)} previsto`
+            : waitingCount && waitingCount > 0
+              ? `${waitingCount} ${waitingCount === 1 ? 'bolsa aguardando' : 'bolsas aguardando'}`
+              : hint ?? 'Rendas e bolsas'}
+        </Text>
       </View>
     </StatusCard>
   );

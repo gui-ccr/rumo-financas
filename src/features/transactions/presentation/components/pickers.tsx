@@ -19,8 +19,15 @@ export function AccountPicker({
   onChange: (id: number) => void;
 }) {
   const colors = useThemeColors();
+  // Remount when the list of options changes (e.g. transfer hides the source account), so the
+  // scroll offset from the previous list does not leave the selection off screen.
+  const listKey = accounts.map((a) => a.id).join(',');
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2 px-4">
+    <ScrollView
+      key={listKey}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerClassName="gap-2 px-4">
       {accounts.map((a) => (
         <Chip
           key={a.id}

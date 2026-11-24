@@ -60,12 +60,14 @@ export function Money({
 
   const [, whole, decimals] = formatted.match(/^R\$\s?([\d.]+),(\d{2})$/) ?? [];
   return (
-    <View accessible accessibilityLabel={label} className={cn('flex-row items-baseline', className)}>
-      <Text className={cn(SIZE[size].minor, color, 'mr-1.5 opacity-50')}>{prefix}R$</Text>
-      <Text className={cn(SIZE[size].main, color)} style={TABULAR}>
+    <View accessible accessibilityLabel={label} className={cn('min-w-0 shrink flex-row items-baseline', className)}>
+      <Text numberOfLines={1} className={cn(SIZE[size].minor, color, 'mr-1.5 opacity-50')}>
+        {prefix}R$
+      </Text>
+      <Text numberOfLines={1} className={cn(SIZE[size].main, color)} style={TABULAR}>
         {whole}
       </Text>
-      <Text className={cn(SIZE[size].minor, color, 'opacity-50')} style={TABULAR}>
+      <Text numberOfLines={1} className={cn(SIZE[size].minor, color, 'opacity-50')} style={TABULAR}>
         ,{decimals}
       </Text>
     </View>

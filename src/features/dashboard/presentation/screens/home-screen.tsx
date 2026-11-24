@@ -128,7 +128,10 @@ export function HomeScreen() {
           recent.data && recent.data.length > 0 ? (
             <ListSection variant="plain">
               {recent.data.map((t) => (
-                <TransactionRow key={t.id} transaction={t} />
+                // ListSection "plain" has -mx-4; this px-4 matches ListRow ("A pagar") so both feeds align.
+                <View key={t.id} className="px-4">
+                  <TransactionRow transaction={t} />
+                </View>
               ))}
             </ListSection>
           ) : recent.data ? (

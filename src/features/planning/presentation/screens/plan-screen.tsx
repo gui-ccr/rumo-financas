@@ -3,6 +3,8 @@ import { Bike, ChevronRight, Plus, Tags, Wallet } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 
+import { useBillsOfMonth } from '@/features/bills/presentation/hooks';
+import { useCardsWithInvoices } from '@/features/cards/presentation/hooks';
 import { useCategories } from '@/features/accounts/presentation/hooks';
 import {
   INCOME_KIND_LABEL,
@@ -17,16 +19,17 @@ import {
 import { currentMonth, formatShortDate } from '@/shared/domain/dates';
 import { Button } from '@/shared/ui/button';
 import { CategoryBadge, IconTile } from '@/shared/ui/category-badge';
-import { EmptyState } from '@/shared/ui/feedback';
+import { EmptyState, Skeleton } from '@/shared/ui/feedback';
 import { Illustration } from '@/shared/ui/illustration';
 import { ListRow, ListSection } from '@/shared/ui/list';
 import { Money } from '@/shared/ui/money';
-import { HeaderIconButton, Screen } from '@/shared/ui/screen';
+import { Screen } from '@/shared/ui/screen';
 import { Sheet, type SheetRef } from '@/shared/ui/sheet';
 import { Pill, Surface } from '@/shared/ui/surface';
 import { Text } from '@/shared/ui/text';
 import { useThemeColors } from '@/shared/ui/theme';
 
+import { monthForecast } from '../../domain/forecast';
 import { IncomeFormSheet } from '../components/income-form-sheet';
 import { ReceiveIncomeSheet } from '../components/receive-income-sheet';
 
@@ -38,6 +41,8 @@ export function PlanScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const incomes = useIncomes();
   const pendingIncomes = usePendingIncomes();
   const expected = useExpectedIncome(month);
+  const bills = useBillsOfMonth(month);
+  const cards = useCardsWithInvoices();
   const categories = useCategories();
   const addExpected = useAddExpectedIncome();
 
@@ -56,27 +61,29 @@ export function PlanScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const expectedTotal = expected.data ?? 0;
   const categoryCount = categories.data?.length;
 
+  const forecastReady = expected.data !== undefined && bills.data !== undefined && cards.data !== undefined;
+  const forecast = monthForecast({
+    month,
+    expectedIncomeCents: expectedTotal,
+    bills: bills.data?.list ?? [],
+    invoices: (cards.data ?? []).flatMap((c) => c.invoices),
+  });
+  const hasSurplus = forecast.balanceCents >= 0;
+
   const refresh = () => {
     incomes.refetch();
     pendingIncomes.refetch();
     expected.refetch();
+    bills.refetch();
+    cards.refetch();
     categories.refetch();
   };
 
   const isRefreshing =
-    incomes.isRefetching || pendingIncomes.isRefetching || expected.isRefetching;
+    incomes.isRefetching || pendingIncomes.isRefetching || expected.isRefetching || bills.isRefetching || cards.isRefetching;
 
   return (
-    <Screen
-      title="Planejar"
-      embedded={embedded}
-      actions={
-        <HeaderIconButton label="Nova renda" onPress={() => incomeSheetRef.current?.present()}>
-          <Plus size={20} color={colors.foreground} strokeWidth={1.9} />
-        </HeaderIconButton>
-      }
-      onRefresh={refresh}
-      refreshing={isRefreshing}>
+    <Screen title="Planejar" embedded={embedded} onRefresh={refresh} refreshing={isRefreshing}>
       {/* Hero card com previsão de entradas e ilustração */}
       <Surface tone="raised" className="flex-row items-center justify-between p-5">
         <View className="flex-1 gap-1">
@@ -93,6 +100,47 @@ export function PlanScreen({ embedded = false }: { embedded?: boolean } = {}) {
         </View>
         <Illustration name={waitingList.length > 0 ? 'waiting' : 'plan'} size={72} />
       </Surface>
+
+      <Button size="lg" className="w-full" onPress={() => incomeSheetRef.current?.present()}>
+        <Plus size={18} color={colors.primaryForeground} strokeWidth={2} />
+        <Text>Nova renda</Text>
+      </Button>
+
+      {/* Previsão de gastos: contas do mês (pagas e pendentes) mais o saldo das faturas do mês */}
+      {forecastReady ? (
+        <Surface tone="raised" className="gap-4 p-5">
+          <View className="gap-1">
+            <Text variant="caption">Previsão de gastos do mês</Text>
+            <Money cents={forecast.spendingCents} size="xl" />
+          </View>
+
+          <View className="gap-2">
+            <View className="flex-row items-center justify-between">
+              <Text variant="muted">Contas</Text>
+              <Money cents={forecast.billsCents} />
+            </View>
+            <View className="flex-row items-center justify-between">
+              <Text variant="muted">Cartão (faturas do mês)</Text>
+              <Money cents={forecast.cardsCents} />
+            </View>
+            {forecast.unpricedBills > 0 && (
+              <Text variant="caption">
+                {forecast.unpricedBills === 1
+                  ? '1 conta sem valor definido não entra no total.'
+                  : `${forecast.unpricedBills} contas sem valor definido não entram no total.`}
+              </Text>
+            )}
+          </View>
+
+          <View className="h-px bg-border" />
+          <View className="flex-row items-center justify-between">
+            <Text className="font-sans-semibold text-base">{hasSurplus ? 'Sobra prevista' : 'Falta prevista'}</Text>
+            <Money cents={Math.abs(forecast.balanceCents)} size="md" tone={hasSurplus ? 'income' : 'expense'} />
+          </View>
+        </Surface>
+      ) : (
+        <Skeleton className="h-44" />
+      )}
 
       {/* Bolsas e Rendas Pendentes / Aguardando. Vazio: o estado fica fora de qualquer card. */}
       {pendingList.length === 0 ? (

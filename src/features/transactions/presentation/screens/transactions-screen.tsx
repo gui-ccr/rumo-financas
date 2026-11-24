@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Receipt, Search, X } from 'lucide-react-native';
 import { useDeferredValue, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { currentMonth, formatDayHeader, formatMonth } from '@/shared/domain/dates';
 import { Button } from '@/shared/ui/button';
@@ -10,7 +10,7 @@ import { Skeleton } from '@/shared/ui/feedback';
 import { Input } from '@/shared/ui/input';
 import { Money } from '@/shared/ui/money';
 import { MonthSwitcher } from '@/shared/ui/month-switcher';
-import { HeaderIconButton, Screen } from '@/shared/ui/screen';
+import { Screen } from '@/shared/ui/screen';
 import { Text } from '@/shared/ui/text';
 import { useThemeColors } from '@/shared/ui/theme';
 
@@ -32,7 +32,6 @@ export function TransactionsScreen({ embedded = false }: { embedded?: boolean } 
   const [month, setMonth] = useState(currentMonth());
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
   const deferredSearch = useDeferredValue(search);
 
   const { data, isLoading, refetch, isRefetching } = useTransactions({
@@ -46,39 +45,32 @@ export function TransactionsScreen({ embedded = false }: { embedded?: boolean } 
   const income = list.filter((t) => t.type === 'income').reduce((s, t) => s + t.amountCents, 0);
   const expense = list.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amountCents, 0);
 
-  // Closing the field also clears the query, so no filter stays applied out of sight.
-  const toggleSearch = () => {
-    if (searchOpen) setSearch('');
-    setSearchOpen(!searchOpen);
-  };
-
   return (
-    <Screen
-      title="Atividade"
-      embedded={embedded}
-      actions={
-        <HeaderIconButton onPress={toggleSearch} label={searchOpen ? 'Fechar busca' : 'Buscar'}>
-          {searchOpen ? <X size={18} color={colors.foreground} /> : <Search size={18} color={colors.foreground} />}
-        </HeaderIconButton>
-      }
-      onRefresh={refetch}
-      refreshing={isRefetching}>
+    <Screen title="Atividade" embedded={embedded} onRefresh={refetch} refreshing={isRefetching}>
       <View className="gap-3">
-        {searchOpen && (
-          <View className="justify-center">
-            <View className="absolute left-4 z-10">
-              <Search size={16} color={colors.mutedForeground} />
-            </View>
-            <Input
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Buscar descrição ou categoria"
-              className="pl-11"
-              returnKeyType="search"
-              autoFocus
-            />
+        <View className="justify-center">
+          <View className="absolute left-4 z-10">
+            <Search size={16} color={colors.mutedForeground} />
           </View>
-        )}
+          <Input
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Buscar descrição ou categoria"
+            className="pl-11 pr-12"
+            returnKeyType="search"
+            autoCorrect={false}
+          />
+          {search.length > 0 && (
+            <Pressable
+              onPress={() => setSearch('')}
+              accessibilityRole="button"
+              accessibilityLabel="Limpar busca"
+              hitSlop={8}
+              className="absolute right-3 z-10 h-8 w-8 items-center justify-center rounded-full active:opacity-70">
+              <X size={16} color={colors.mutedForeground} />
+            </Pressable>
+          )}
+        </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
           {FILTERS.map((f) => (

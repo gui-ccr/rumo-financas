@@ -42,6 +42,9 @@ export function Screen({
 }) {
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  // The header row only exists when it has something to show. An embedded screen without
+  // actions would otherwise leave an empty line under the host's own header.
+  const hasHeaderRow = Boolean(back) || header != null || Boolean(title && !embedded) || Boolean(actions);
   return (
     <View className="flex-1 bg-background">
       <ScrollView
@@ -52,15 +55,17 @@ export function Screen({
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
           ) : undefined
         }>
-        <View className="mb-5 min-h-[44px] flex-row items-center justify-between gap-3 px-5">
-          {Boolean(back) && (
-            <HeaderIconButton label="Voltar" onPress={typeof back === 'function' ? back : () => router.back()}>
-              <ArrowLeft size={20} color={colors.foreground} strokeWidth={1.9} />
-            </HeaderIconButton>
-          )}
-          <View className="flex-1">{header ?? (title && !embedded ? <Text variant="title">{title}</Text> : null)}</View>
-          {actions && <View className="flex-row items-center gap-1">{actions}</View>}
-        </View>
+        {hasHeaderRow && (
+          <View className="mb-5 min-h-[44px] flex-row items-center justify-between gap-3 px-5">
+            {Boolean(back) && (
+              <HeaderIconButton label="Voltar" onPress={typeof back === 'function' ? back : () => router.back()}>
+                <ArrowLeft size={20} color={colors.foreground} strokeWidth={1.9} />
+              </HeaderIconButton>
+            )}
+            <View className="flex-1">{header ?? (title && !embedded ? <Text variant="title">{title}</Text> : null)}</View>
+            {actions && <View className="flex-row items-center gap-1">{actions}</View>}
+          </View>
+        )}
         <View className={cn('gap-7 px-5', contentClassName)}>{children}</View>
       </ScrollView>
     </View>

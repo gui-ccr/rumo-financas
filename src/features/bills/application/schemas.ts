@@ -9,6 +9,22 @@ export const BillInputSchema = z.object({
   recurrence: z.enum(['monthly', 'once']),
   startMonth: z.string().regex(/^\d{4}-\d{2}$/),
   priority: z.enum(['essential', 'important', 'flexible']).default('important'),
+  /** Monthly bills only: how many months it lasts. null or absent = every month. */
+  repeatCount: z
+    .number()
+    .int()
+    .min(2, 'Use pelo menos 2 vezes')
+    .max(120, 'No máximo 120 vezes')
+    .nullable()
+    .default(null),
+  /** Optional free text. Blank means no notes. */
+  notes: z
+    .string()
+    .trim()
+    .max(500, 'A descrição passa de 500 caracteres')
+    .transform((v) => (v === '' ? null : v))
+    .nullable()
+    .default(null),
 });
 export type BillInput = z.input<typeof BillInputSchema>;
 

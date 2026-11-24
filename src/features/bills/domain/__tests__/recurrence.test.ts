@@ -1,6 +1,6 @@
 import { addMonths, dateInMonth, formatDue } from '@/shared/domain/dates';
 
-import { missingDates, monthlyDueDates } from '../recurrence';
+import { expectedDueDates, missingDates, monthlyDueDates, repeatEndMonth } from '../recurrence';
 
 describe('dates', () => {
   it('adds months across years', () => {
@@ -33,5 +33,45 @@ describe('monthly bills', () => {
 
   it('only returns what is missing', () => {
     expect(missingDates(['2026-11-10', '2026-12-10'], ['2026-11-10'])).toEqual(['2026-12-10']);
+  });
+});
+
+describe('bills with a number of times', () => {
+  const base = { recurrence: 'monthly' as const, dueDay: 10, startMonth: '2026-11' };
+
+  it('"3 vezes" generates exactly three due dates, from the start month', () => {
+    const dates = expectedDueDates({ ...base, repeatCount: 3 }, '2026-11-14');
+    expect(dates).toEqual(['2026-11-10', '2026-12-10', '2027-01-10']);
+  });
+
+  it('"3 vezes" still generates exactly three when the reference date is later than its end', () => {
+    const dates = expectedDueDates({ ...base, repeatCount: 3 }, '2027-06-01');
+    expect(dates).toEqual(['2026-11-10', '2026-12-10', '2027-01-10']);
+  });
+
+  it('a bill with no count keeps repeating through the materialized horizon', () => {
+    expect(expectedDueDates({ ...base, repeatCount: null }, '2026-11-14')).toHaveLength(3);
+    expect(expectedDueDates({ ...base }, '2026-11-14')).toHaveLength(3);
+  });
+
+  it('a count longer than the horizon is cut at the horizon, not at the count', () => {
+    const dates = expectedDueDates({ ...base, repeatCount: 120 }, '2026-11-14');
+    expect(dates).toHaveLength(3);
+  });
+
+  it('a count of 2 covers the start month and the next one only', () => {
+    expect(monthlyDueDates(5, '2026-11', '2026-11-14', 2, 2)).toEqual(['2026-11-05', '2026-12-05']);
+  });
+
+  it('the last month of a counted bill is start + count - 1, and null without a count', () => {
+    expect(repeatEndMonth('2026-11', 3)).toBe('2027-01');
+    expect(repeatEndMonth('2026-11', 2)).toBe('2026-12');
+    expect(repeatEndMonth('2026-11', null)).toBeNull();
+  });
+
+  it('a one-time bill ignores the count', () => {
+    expect(expectedDueDates({ recurrence: 'once', dueDay: 10, startMonth: '2026-11', repeatCount: 3 }, '2026-11-14')).toEqual([
+      '2026-11-10',
+    ]);
   });
 });

@@ -50,6 +50,9 @@ export function PaymentPlanSheet({ sheetRef, plan }: { sheetRef: RefObject<Sheet
                 <View className="items-end gap-1">
                   <Pill label={item.coveredByBalance ? 'Cabe' : 'Não cabe'} tone={item.coveredByBalance ? 'income' : 'expense'} />
                   <Money cents={item.occurrence.amountCents ?? 0} size="sm" />
+                  {!item.coveredByBalance && item.missingCents > 0 && (
+                    <Text className="font-sans-medium text-xs text-expense">{`Falta ${formatBRL(item.missingCents)}`}</Text>
+                  )}
                 </View>
               }
             />
@@ -65,13 +68,16 @@ export function PaymentPlanSheet({ sheetRef, plan }: { sheetRef: RefObject<Sheet
           ))}
         </ListSection>
 
-        {plan.shortfallCents > 0 ? (
-          <Text variant="muted">
-            Faltam <Text className="font-mono-medium text-foreground">{formatBRL(plan.shortfallCents)}</Text> para pagar todas.
-          </Text>
-        ) : (
-          <Text variant="muted">O saldo cobre todas as contas deste mês.</Text>
-        )}
+        <View className="gap-1.5">
+          <Text className="font-sans-medium text-sm">{`Seu saldo: ${formatBRL(plan.availableCents)}`}</Text>
+          {plan.shortfallCents > 0 ? (
+            <Text className="font-sans-semibold text-sm text-expense">
+              {`Faltam ${formatBRL(plan.shortfallCents)} para pagar as contas deste mês`}
+            </Text>
+          ) : (
+            <Text className="font-sans-semibold text-sm text-income">Seu saldo cobre todas as contas deste mês</Text>
+          )}
+        </View>
       </View>
     </Sheet>
   );

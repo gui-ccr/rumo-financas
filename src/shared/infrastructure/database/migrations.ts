@@ -263,6 +263,10 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX idx_captures_shift ON notification_captures(shift_id);
   CREATE INDEX idx_captures_status_posted ON notification_captures(status, posted_at);
   ` + NUBANK_PIX_RULE_SQL,
+  /* 7 — additive: a bill can last a set number of months (repeat_count, null = every month) and carry a note. */ `
+  ALTER TABLE bills ADD COLUMN repeat_count INTEGER;
+  ALTER TABLE bills ADD COLUMN notes TEXT;
+  `,
 ];
 
 /** UPDATE statements that recolor rows by name (values are constants, not user input). */

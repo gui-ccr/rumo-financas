@@ -47,7 +47,9 @@ describe('buildPaymentPlan', () => {
     expect(plan.items.map((i) => i.coveredByBalance)).toEqual([true, true, false, false]);
     expect(plan.items.map((i) => i.runningBalanceCents)).toEqual([15_000, 5_000, 5_000, 5_000]);
     expect(plan.coveredCount).toBe(2);
-    expect(plan.shortfallCents).toBe(7_000);
+    // Known amounts 27.000 minus the 25.000 balance. The 6.000 misses 1.000, the 1.000 misses the other 1.000.
+    expect(plan.shortfallCents).toBe(2_000);
+    expect(plan.items.map((i) => i.missingCents)).toEqual([0, 0, 1_000, 1_000]);
   });
 
   it('covers nothing when the balance is zero and the whole amount is shortfall', () => {
@@ -60,6 +62,29 @@ describe('buildPaymentPlan', () => {
     expect(plan.items.map((i) => i.runningBalanceCents)).toEqual([0, 0]);
     expect(plan.coveredCount).toBe(0);
     expect(plan.shortfallCents).toBe(10_000);
+    expect(plan.items.map((i) => i.missingCents)).toEqual([7_000, 3_000]);
+  });
+
+  it('reports the missing money of one bill larger than the balance: R$ 40 against R$ 125 leaves R$ 85', () => {
+    const plan = buildPaymentPlan({ ref: REF,
+      availableCents: 4_000,
+      pending: [occ({ id: 1, amountCents: 12_500 })],
+      expectedIncomes: [],
+    });
+    expect(plan.items[0]).toMatchObject({ coveredByBalance: false, missingCents: 8_500 });
+    expect(plan.shortfallCents).toBe(8_500);
+  });
+
+  it('has no missing money for a covered item, and none for an item with no amount', () => {
+    const plan = buildPaymentPlan({ ref: REF,
+      availableCents: 5_000,
+      pending: [
+        occ({ id: 1, priority: 'essential', amountCents: null }),
+        occ({ id: 2, priority: 'important', amountCents: 5_000 }),
+      ],
+      expectedIncomes: [],
+    });
+    expect(plan.items.map((i) => i.missingCents)).toEqual([0, 0]);
   });
 
   it('is empty when there are no pending bills, and still reports the next income', () => {

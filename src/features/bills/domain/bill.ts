@@ -23,6 +23,10 @@ export type Bill = {
   recurrence: Recurrence;
   startMonth: MonthKey;
   priority: BillPriority;
+  /** Monthly bills only: how many months it lasts, from startMonth. null = every month, no end. */
+  repeatCount: number | null;
+  /** Free text shown on the bill detail. */
+  notes: string | null;
   active: boolean;
 };
 

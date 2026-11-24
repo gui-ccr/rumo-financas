@@ -29,6 +29,12 @@ export type PaymentPlanItem<T extends PlanOccurrence> = {
   coveredByBalance: boolean;
   /** Balance left after this item, when it is paid in order. */
   runningBalanceCents: number;
+  /**
+   * How much money is missing for this item to be covered: 0 when covered (or with no known
+   * amount), otherwise the part of its amount the balance does not reach once every item
+   * before it is paid.
+   */
+  missingCents: number;
 };
 
 export type PaymentPlan<T extends PlanOccurrence> = {
@@ -37,7 +43,7 @@ export type PaymentPlan<T extends PlanOccurrence> = {
   items: PaymentPlanItem<T>[];
   /** How many of the items with a known amount the balance covers. */
   coveredCount: number;
-  /** Sum of the known amounts that the current balance does not reach. */
+  /** Known amounts of the plan minus the balance, never below zero: the money still missing for all of them. */
   shortfallCents: number;
   /** Earliest dated expected income still pending, or null. */
   nextIncome: PlanIncome | null;
@@ -81,22 +87,28 @@ export function buildPaymentPlan<T extends PlanOccurrence>(input: {
   let balance = input.availableCents;
   let stopped = false;
   let coveredCount = 0;
-  let shortfallCents = 0;
+  // Everything the plan would pay, covered or not, accumulated in payment order.
+  let cumulativeCents = 0;
+  const knownTotalCents = ordered.reduce((sum, o) => sum + (o.amountCents ?? 0), 0);
 
   const items: PaymentPlanItem<T>[] = ordered.map((occurrence, index) => {
     let covered = false;
+    let missingCents = 0;
     if (occurrence.amountCents !== null) {
+      cumulativeCents += occurrence.amountCents;
       if (!stopped && balance >= occurrence.amountCents) {
         balance -= occurrence.amountCents;
         covered = true;
         coveredCount += 1;
       } else {
         stopped = true;
-        shortfallCents += occurrence.amountCents;
+        missingCents = Math.min(occurrence.amountCents, Math.max(0, cumulativeCents - input.availableCents));
       }
     }
-    return { occurrence, order: index + 1, coveredByBalance: covered, runningBalanceCents: balance };
+    return { occurrence, order: index + 1, coveredByBalance: covered, runningBalanceCents: balance, missingCents };
   });
+
+  const shortfallCents = Math.max(0, knownTotalCents - input.availableCents);
 
   const nextIncome =
     input.expectedIncomes

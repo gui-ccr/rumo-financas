@@ -6,9 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAccounts, useCategoriesByUsage } from '@/features/accounts/presentation/hooks';
 import { CategoryPicker } from '@/features/transactions/presentation/components/category-picker';
 import { AccountPicker } from '@/features/transactions/presentation/components/pickers';
-import { currentMonth } from '@/shared/domain/dates';
+import { currentMonth, formatMonth } from '@/shared/domain/dates';
 import { errorMessage } from '@/shared/presentation/use-command';
 import { Button } from '@/shared/ui/button';
+import { DayPicker } from '@/shared/ui/day-picker';
 import { ErrorNote, Skeleton } from '@/shared/ui/feedback';
 import { Chip, Field, NumberStepper } from '@/shared/ui/form';
 import { Input } from '@/shared/ui/input';
@@ -19,6 +20,7 @@ import { Segmented } from '@/shared/ui/segmented';
 import { Text } from '@/shared/ui/text';
 
 import { BILL_PRIORITY_LABEL, type Bill, type BillPriority, type Recurrence } from '../../domain/bill';
+import { repeatEndMonth } from '../../domain/recurrence';
 import { useBill, useDeleteBill, useSaveBill } from '../hooks';
 
 const PRIORITIES: { value: BillPriority; label: string }[] = [
@@ -26,6 +28,19 @@ const PRIORITIES: { value: BillPriority; label: string }[] = [
   { value: 'important', label: BILL_PRIORITY_LABEL.important },
   { value: 'flexible', label: BILL_PRIORITY_LABEL.flexible },
 ];
+
+/**
+ * How often the bill comes. "forever" and "times" are both monthly bills; the difference is
+ * whether they stop after a set number of months. "once" is a single due date.
+ */
+type Scope = 'forever' | 'times' | 'once';
+
+const DEFAULT_TIMES = 3;
+
+function scopeOf(bill: Bill | null): Scope {
+  if (bill?.recurrence === 'once') return 'once';
+  return bill?.repeatCount ? 'times' : 'forever';
+}
 
 export function BillFormScreen({ id }: { id?: number }) {
   const bill = useBill(id);
@@ -47,11 +62,16 @@ function BillForm({ bill }: { bill: Bill | null }) {
   const [variable, setVariable] = useState(bill ? bill.amountCents === null : false);
   const [amount, setAmount] = useState<number | null>(bill?.amountCents ?? null);
   const [dueDay, setDueDay] = useState(bill?.dueDay ?? 10);
-  const [recurrence, setRecurrence] = useState<Recurrence>(bill?.recurrence ?? 'monthly');
+  const [scope, setScope] = useState<Scope>(scopeOf(bill));
+  const [repeatCount, setRepeatCount] = useState(bill?.repeatCount ?? DEFAULT_TIMES);
   const [startMonth, setStartMonth] = useState(bill?.startMonth ?? currentMonth());
   const [priority, setPriority] = useState<BillPriority>(bill?.priority ?? 'important');
   const [categoryId, setCategoryId] = useState<number | null>(bill?.categoryId ?? null);
   const [accountId, setAccountId] = useState<number | null>(bill?.accountId ?? null);
+  const [notes, setNotes] = useState(bill?.notes ?? '');
+
+  const recurrence: Recurrence = scope === 'once' ? 'once' : 'monthly';
+  const endMonth = scope === 'times' ? repeatEndMonth(startMonth, repeatCount) : null;
 
   const categories = useCategoriesByUsage('expense');
   const accounts = useAccounts();
@@ -69,8 +89,10 @@ function BillForm({ bill }: { bill: Bill | null }) {
           accountId,
           dueDay,
           recurrence,
+          repeatCount: scope === 'times' ? repeatCount : null,
           startMonth,
           priority,
+          notes,
         },
       },
       { onSuccess: () => router.back() },
@@ -98,11 +120,12 @@ function BillForm({ bill }: { bill: Bill | null }) {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-6 px-5 pb-8 pt-2">
         <Segmented
           options={[
-            { value: 'monthly', label: 'Todo mês' },
+            { value: 'forever', label: 'Todo mês' },
+            { value: 'times', label: 'Algumas vezes' },
             { value: 'once', label: 'Só uma vez' },
           ]}
-          value={recurrence}
-          onChange={setRecurrence}
+          value={scope}
+          onChange={setScope}
         />
 
         <Field label="Nome" hint="Como a conta aparece na lista. Ex.: Aluguel, Internet, Luz.">
@@ -123,13 +146,9 @@ function BillForm({ bill }: { bill: Bill | null }) {
           </View>
         </Field>
 
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Field label="Vence no dia" hint="Dia do mês em que a conta vence.">
-              <NumberStepper value={dueDay} onChange={setDueDay} min={1} max={31} label="dia de vencimento" />
-            </Field>
-          </View>
-        </View>
+        <Field label="Vence no dia" hint="Se o mês não tiver esse dia, vence no último dia.">
+          <DayPicker value={dueDay} onChange={setDueDay} label="Dia de vencimento" />
+        </Field>
 
         <Field
           label={recurrence === 'monthly' ? 'A partir de' : 'No mês de'}
@@ -137,6 +156,33 @@ function BillForm({ bill }: { bill: Bill | null }) {
           <View className="flex-row">
             <MonthSwitcher month={startMonth} onChange={setStartMonth} />
           </View>
+        </Field>
+
+        {scope === 'times' && (
+          <Field
+            label="Quantas vezes"
+            hint={endMonth ? `Termina em ${formatMonth(endMonth).toLowerCase()}.` : undefined}>
+            <NumberStepper
+              value={repeatCount}
+              onChange={setRepeatCount}
+              min={2}
+              max={120}
+              format={(n) => `${n} vezes`}
+              label="quantidade de vezes"
+            />
+          </Field>
+        )}
+
+        <Field label="Descrição" hint="Opcional. Aparece nos detalhes da conta.">
+          <Input
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Ex.: Plano anual, desconto até o dia 5"
+            multiline
+            maxLength={500}
+            textAlignVertical="top"
+            className="h-auto min-h-[96px] py-3"
+          />
         </Field>
 
         <Field

@@ -17,6 +17,8 @@ type BillRow = {
   recurrence: Recurrence;
   start_month: string;
   priority: BillPriority;
+  repeat_count: number | null;
+  notes: string | null;
   active: number;
 };
 
@@ -55,6 +57,8 @@ const toBill = (r: BillRow): Bill => ({
   recurrence: r.recurrence,
   startMonth: r.start_month,
   priority: r.priority,
+  repeatCount: r.repeat_count ?? null,
+  notes: r.notes ?? null,
   active: toBool(r.active),
 });
 
@@ -89,18 +93,42 @@ export class SqliteBillRepository implements BillRepository, PaymentLinks {
 
   async create(b: BillData) {
     const res = await this.db.runAsync(
-      `INSERT INTO bills (name, amount_cents, category_id, account_id, due_day, recurrence, start_month, priority)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [b.name, b.amountCents, b.categoryId, b.accountId, b.dueDay, b.recurrence, b.startMonth, b.priority],
+      `INSERT INTO bills (name, amount_cents, category_id, account_id, due_day, recurrence, start_month, priority, repeat_count, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        b.name,
+        b.amountCents,
+        b.categoryId,
+        b.accountId,
+        b.dueDay,
+        b.recurrence,
+        b.startMonth,
+        b.priority,
+        b.repeatCount,
+        b.notes,
+      ],
     );
     return res.lastInsertRowId;
   }
 
   async update(id: number, b: BillData) {
     await this.db.runAsync(
-      `UPDATE bills SET name = ?, amount_cents = ?, category_id = ?, account_id = ?, due_day = ?, recurrence = ?, start_month = ?, priority = ?
+      `UPDATE bills SET name = ?, amount_cents = ?, category_id = ?, account_id = ?, due_day = ?, recurrence = ?, start_month = ?, priority = ?,
+         repeat_count = ?, notes = ?
        WHERE id = ?`,
-      [b.name, b.amountCents, b.categoryId, b.accountId, b.dueDay, b.recurrence, b.startMonth, b.priority, id],
+      [
+        b.name,
+        b.amountCents,
+        b.categoryId,
+        b.accountId,
+        b.dueDay,
+        b.recurrence,
+        b.startMonth,
+        b.priority,
+        b.repeatCount,
+        b.notes,
+        id,
+      ],
     );
   }
 

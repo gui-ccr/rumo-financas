@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Alert, Pressable, View } from 'react-native';
 
 import { formatMonth, formatShortDate } from '@/shared/domain/dates';
+import { formatBRL } from '@/shared/domain/money';
 import { Button } from '@/shared/ui/button';
 import { EmptyState, Skeleton } from '@/shared/ui/feedback';
 import { ListRow, ListSection } from '@/shared/ui/list';
@@ -11,7 +12,8 @@ import { Pill, Surface } from '@/shared/ui/surface';
 import { Text } from '@/shared/ui/text';
 
 import { BILL_PRIORITY_LABEL, type BillPriority } from '../../domain/bill';
-import { useBillDetail, useDeleteBill } from '../hooks';
+import { repeatEndMonth } from '../../domain/recurrence';
+import { useBillDetail, useDeleteBill, usePaymentPlan } from '../hooks';
 
 /** One line on what each priority means, so the word is not a guess. */
 const PRIORITY_HELP: Record<BillPriority, string> = {
@@ -29,6 +31,7 @@ const PRIORITY_TONE: Record<BillPriority, 'accent' | 'warning' | 'neutral'> = {
 /** Details of one bill: what it is, what is due next, what was paid, and the three actions. */
 export function BillDetailScreen({ id }: { id: number }) {
   const detail = useBillDetail(id);
+  const plan = usePaymentPlan();
   const archive = useDeleteBill();
 
   if (detail.isPending) {
@@ -68,6 +71,17 @@ export function BillDetailScreen({ id }: { id: number }) {
   const recurrence =
     bill.recurrence === 'monthly' ? `Todo dia ${bill.dueDay}` : `Dia ${bill.dueDay} de ${formatMonth(bill.startMonth).toLowerCase()}`;
 
+  const endMonth = repeatEndMonth(bill.startMonth, bill.repeatCount);
+  const recurrenceLabel =
+    bill.recurrence === 'once'
+      ? 'Uma vez'
+      : bill.repeatCount !== null && endMonth !== null
+        ? `${bill.repeatCount} vezes (até ${formatMonth(endMonth).toLowerCase()})`
+        : 'Mensal';
+
+  // What is still missing for the next open due, when the plan covers it (only this month and overdue dues are in the plan).
+  const nextInPlan = next && next.amountCents !== null ? plan.data?.items.find((i) => i.occurrence.id === next.id) : undefined;
+
   return (
     <Screen back title={bill.name}>
       <Surface tone="plain" className="gap-4 p-5">
@@ -87,9 +101,18 @@ export function BillDetailScreen({ id }: { id: number }) {
         </Text>
         <View className="h-px bg-border" />
         <Row label="Vencimento" value={recurrence} />
-        <Row label="Recorrência" value={bill.recurrence === 'monthly' ? 'Mensal' : 'Uma vez'} />
+        <Row label="Recorrência" value={recurrenceLabel} />
         <Row label="Conta de pagamento" value={accountName ?? 'Não definida'} />
         <Row label="Categoria" value={categoryName ?? 'Sem categoria'} />
+        {bill.notes ? (
+          <>
+            <View className="h-px bg-border" />
+            <View className="gap-1">
+              <Text variant="caption">Descrição</Text>
+              <Text className="text-sm leading-5">{bill.notes}</Text>
+            </View>
+          </>
+        ) : null}
       </Surface>
 
       <View className="flex-row gap-2">
@@ -105,6 +128,14 @@ export function BillDetailScreen({ id }: { id: number }) {
           <Text>Editar</Text>
         </Button>
       </View>
+
+      {nextInPlan?.coveredByBalance ? (
+        <Text className="font-sans-semibold text-sm text-income">Seu saldo cobre esta conta</Text>
+      ) : nextInPlan && nextInPlan.missingCents > 0 ? (
+        <Text className="font-sans-semibold text-sm text-expense">
+          {`Faltam ${formatBRL(nextInPlan.missingCents)} para pagar esta conta`}
+        </Text>
+      ) : null}
 
       {open.length > 0 ? (
         <ListSection title="Próximos vencimentos">
@@ -145,7 +176,7 @@ export function BillDetailScreen({ id }: { id: number }) {
             />
           ))
         ) : (
-          <View className="px-1 py-2">
+          <View className="px-4 py-4">
             <Text variant="muted">Nenhum pagamento ainda. Cada pagamento aparece aqui, com o valor pago.</Text>
           </View>
         )}

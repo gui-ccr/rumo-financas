@@ -67,9 +67,17 @@ export function BillsScreen({ embedded = false }: { embedded?: boolean } = {}) {
     <Screen
       title="Contas"
       embedded={embedded}
+      // Embedded in Dinheiro there is no title: the month switcher takes the left side, so the row is not half empty.
+      header={
+        embedded ? (
+          <View className="flex-row">
+            <MonthSwitcher month={month} onChange={setMonth} />
+          </View>
+        ) : undefined
+      }
       actions={
         <>
-          <MonthSwitcher month={month} onChange={setMonth} />
+          {!embedded && <MonthSwitcher month={month} onChange={setMonth} />}
           <HeaderIconButton label="Nova conta a pagar" onPress={newBill}>
             <Plus size={20} color={colors.foreground} strokeWidth={1.9} />
           </HeaderIconButton>
@@ -104,19 +112,19 @@ export function BillsScreen({ embedded = false }: { embedded?: boolean } = {}) {
             <Illustration name="bills" size={80} />
           </View>
 
-          {plan ? (
-            <View className="gap-1">
-              <Text className="text-sm leading-5">
-                Seu saldo (<Text className="font-mono-medium text-sm">{formatBRL(plan.availableCents)}</Text>) paga{' '}
-                {plan.coveredCount} de {planAmountCount} contas deste mês.
-                {plan.shortfallCents > 0 ? (
-                  <Text className="text-sm">
-                    {' '}
-                    Faltam <Text className="font-mono-medium text-sm">{formatBRL(plan.shortfallCents)}</Text> para pagar
-                    todas.
+          {plan && plan.items.length > 0 ? (
+            <View className="gap-1.5">
+              <Text className="font-sans-medium text-sm">{`Seu saldo: ${formatBRL(plan.availableCents)}`}</Text>
+              {planAmountCount > 0 &&
+                (plan.shortfallCents > 0 ? (
+                  <Text className="font-sans-semibold text-sm text-expense">
+                    {`Faltam ${formatBRL(plan.shortfallCents)} para pagar as contas deste mês`}
                   </Text>
-                ) : null}
-              </Text>
+                ) : (
+                  <Text className="font-sans-semibold text-sm text-income">
+                    Seu saldo cobre todas as contas deste mês
+                  </Text>
+                ))}
               <Text variant="caption">Toque para ver a ordem: o que cabe e o que não cabe.</Text>
             </View>
           ) : null}

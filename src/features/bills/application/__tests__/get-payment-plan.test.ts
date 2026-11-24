@@ -94,9 +94,10 @@ describe('GetPaymentPlan (real SQLite)', () => {
     expect(plan.items[1].occurrence).toMatchObject({ billName: 'Aluguel', overdue: true, dueDate: '2026-11-10' });
     expect(plan.items[1].coveredByBalance).toBe(false);
     expect(plan.coveredCount).toBe(1);
-    // Only this month and the overdue are in the plan: Aluguel of Nov (80.000) + Netflix of Nov (5.000).
+    // Only this month and the overdue are in the plan: Aluguel of Out (80.000), Aluguel of Nov (80.000)
+    // and Netflix of Nov (5.000) = 165.000 known. The balance is 100.000, so 65.000 is still missing.
     // Dec and Jan are materialized for reminders; they are not money due now, so they do not count.
-    expect(plan.shortfallCents).toBe(85_000);
+    expect(plan.shortfallCents).toBe(65_000);
   });
 
   it('reports the next dated income and ignores receipts already in the past', async () => {
